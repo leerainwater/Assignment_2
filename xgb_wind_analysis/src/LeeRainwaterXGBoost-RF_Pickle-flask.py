@@ -1,8 +1,8 @@
 #
 # Author: Lee Rainwater
 # Heavily Borrowed From: Jamey Johnston
-# Title: SciKit Learn Example with pickle
-# Date: 2020/01/30
+# Title: HW02 - Model prediction with Flask
+# Date: 2020/02/21
 # Email: lee.rainwater@tamu.edu
 # Texas A&M University - MS in Analytics - Mays Business School
 #
@@ -14,78 +14,51 @@
 # %%
 # Import OS and set CWD
 import os
-from settings import APP_ROOT
+from flask import Flask, request, redirect, url_for, flash, jsonify
+from settings import APP_STATIC
 import numpy as np
+import pandas as pd
 from numpy import loadtxt, vstack, column_stack
 import xgboost
 from sklearn import model_selection
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+import pickle, json
 
-# Import pickle to save ML models
-import pickle
+app = Flask(__name__)
 
-# APP_ROOT = "/home/edwardrainwater/Documents/tamu/modelDeploy/hw01"
-APP_ROOT = ""
-filename = "TH210_final_wind_analysis-elr.csv"
-filespec = os.path.join(APP_ROOT, filename)
-# %%
-# Load the Altitude Data
-dataset = np.loadtxt(filespec, delimiter=',', skiprows=1, usecols=(0, 1, 2, 5))
-# %%
-# Headers of Data
-headers = np.loadtxt(filespec, delimiter=',', skiprows=0, usecols=(0, 1, 2, 5), max_rows=1, dtype=str)
-# "fixed acidity","volatile acidity","citric acid","residual sugar","chlorides","free sulfur dioxide","total sulfur dioxide","density","pH","sulphates","alcohol","quality"
-# %% Split the altitude data into X (independent variable) and y (dependent variable)
-X = dataset[:,0:dataset.shape[1]-1].astype(float)
-Y = dataset[:,dataset.shape[1]-1].astype(float)
-# %% Split altitude data into train and validation sets
-seed = 7
-test_size = 0.3
-X_train, X_valid, y_train, y_valid = model_selection.train_test_split(X, Y, test_size=test_size, random_state=seed)
+@app.route('/')
+def predict():
+    model_dump = "altitude-pickleRF.dat"
+    # Load model from Pickle file
+    model_dump = os.path.join(APP_STATIC, "altitude-pickleRF.dat")
+    loaded_modelRF = pickle.load(open(model_dump, "rb"))
 
-# %% Fit model on altitude Training Data using eXtended Gradient Boosting
-modelXGB = xgboost.XGBRegressor()
-modelXGB.fit(X_train, y_train)
+    jsonfile = request.get_json()
+    data = pd.read_json(json.dumps(jsonfile), orient='index')
+    print(data)
 
-# %% Make predictions for Validation data
-y_predXGB = modelXGB.predict(X_valid)
-predictionsXGB = [round(value) for value in y_predXGB]
+    result = dict()
 
-# %% Evaluate predictions
-score = modelXGB.score(X_train, y_train)
-print(f"Training score: {score:.3f}")
-# %%
-mseXGB = mean_squared_error(y_valid, y_predXGB)
-print("Mean Squared Error of Prediction: %.2f%%" % (mseXGB))
-# %% Create Dataset with Prediction and Inputs
-predictionResultXGB = column_stack(([X_valid, vstack(y_valid), vstack(y_predXGB)]))
+    X = np.array(data[['alt', 'lat', 'mo']])
 
-# %% Fit model on altitude Training Data using Random Forest save model to Pickle file
-modelRF = RandomForestRegressor()
-modelRF.fit(X_train, y_train)
+    print(X)
 
-# %% Make predictions for Validation data
-y_predRF = modelRF.predict(X_valid)
+    prediction = loaded_modelRF.predict(X)
 
-# Evaluate predictions
-mse_RF = mean_squared_error(y_valid, y_predRF)
-print("Accuracy of Random Forest: %.2f%%" % (mse_RF))
+    for i in range(len(prediction)):
+        result[i] = prediction[i]
 
-# Create Dataset with Prediction and Inputs
-predictionResultRF = column_stack(([X_valid, vstack(y_valid), vstack(y_predRF)]))
+    return(jsonify(result))
 
-# save model to file
-pickle.dump(modelRF, open("altitude-pickleRF.dat", "wb"))
+    if __name__ == '__main__':
+        app.run(host='0.0.0.0', debug=True, port=8080)
 
-# Load model from Pickle file
-loaded_modelRF = pickle.load(open("altitude-pickleRF.dat", "rb"))
+    # Predict a altitude diversity from inputs
+    alt, lat, mo = (55, 20, 6)
+    alt_div = loaded_modelRF.predict([[alt, lat, mo]])
 
-# Predict a altitude diversity from inputs
-alt, lat, mo = (55, 20, 6)
-alt_div = loaded_modelRF.predict([[alt, lat, mo]])
+    print(f'Using altitude {alt}kft, latitude {lat}, month {mo}')
+    print(f'Predicted altitude diversity: {alt_div[0]:.3f}')
 
-print(f'Using altitude {alt}kft, latitude {lat}, month {mo}')
-print(f'Predicted altitude diversity: {alt_div[0]:.3f}')
 
-# %%
