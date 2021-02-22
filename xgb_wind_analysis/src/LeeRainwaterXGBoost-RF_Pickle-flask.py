@@ -19,7 +19,6 @@ from settings import APP_STATIC
 import numpy as np
 import pandas as pd
 from numpy import loadtxt, vstack, column_stack
-import xgboost
 from sklearn import model_selection
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
@@ -27,7 +26,7 @@ import pickle, json
 
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/', methods=['POST'])
 def predict():
     model_dump = "altitude-pickleRF.dat"
     # Load model from Pickle file
@@ -36,7 +35,7 @@ def predict():
 
     jsonfile = request.get_json()
     data = pd.read_json(json.dumps(jsonfile), orient='index')
-    print(data)
+    # print(data)
 
     result = dict()
 
@@ -51,14 +50,7 @@ def predict():
 
     return(jsonify(result))
 
-    if __name__ == '__main__':
-        app.run(host='0.0.0.0', debug=True, port=8080)
-
-    # Predict a altitude diversity from inputs
-    alt, lat, mo = (55, 20, 6)
-    alt_div = loaded_modelRF.predict([[alt, lat, mo]])
-
-    print(f'Using altitude {alt}kft, latitude {lat}, month {mo}')
-    print(f'Predicted altitude diversity: {alt_div[0]:.3f}')
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', debug=True, port=8080)
 
 
