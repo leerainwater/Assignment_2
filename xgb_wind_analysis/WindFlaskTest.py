@@ -9,10 +9,14 @@
 
 import requests, json
 
-url = 'http://127.0.0.1:5000/' # Local Flask Test
-# url = 'http://127.0.0.1:8080/' # Docker Test
+# url = 'http://127.0.0.1:5000/' # Local Flask Test
+url = 'http://127.0.0.1:8080/' # Docker Test
 
 # "alt", "lat", "mo"
+# valid values:
+#   50.0 <= alt <= 100.0 (altitude in km, float)
+#   0.0 <= lat <= 60.0 (latitude, float)
+#   1 <= mo <= 12 (month, integer)
 text = json.dumps({"0":{"alt":55.0, "lat":40.0, "mo":7},
                	"1":{"alt":55.0, "lat":20.0, "mo":6},
                	"2":{"alt":65.0, "lat":30.0, "mo":12}
